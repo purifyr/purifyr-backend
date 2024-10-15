@@ -39,6 +39,45 @@ components:
         refresh:
           $ref: '#/components/schemas/Token'
 
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: The URL that is being reported
+        cause:
+          type: string
+          enum: [harassment, terrorism, phishing, fraud, illegal_content, other]
+          description: Reason for reporting the URL
+        user:
+          $ref: '#/components/schemas/User'
+        status:
+          type: string
+          enum: [pending, reviewed, resolved, rejected]
+          default: pending
+          description: Status of the report
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        id: 5f8f8c44b54764421b716233
+        url: https://example.com
+        cause: harassment
+        user:
+          id: 5ebac534954b54139806c112
+          email: fake@example.com
+          name: fake name
+          role: user
+        status: pending
+        createdAt: 2023-10-10T10:30:00Z
+        updatedAt: 2023-10-10T10:30:00Z
+
     Error:
       type: object
       properties:
@@ -84,6 +123,26 @@ components:
           example:
             code: 404
             message: Not found
+
+    ReportNotFound:
+      description: Report not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: Report not found
+
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: Invalid request data
 
   securitySchemes:
     bearerAuth:

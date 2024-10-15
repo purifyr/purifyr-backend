@@ -1,19 +1,24 @@
 const httpStatus = require('http-status');
 const pick = require('../utils/pick');
-const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const reportService = require('../services/report.service');
+const { reportService } = require('../services');
+const ApiError = require('../utils/ApiError');
 
 const createReport = catchAsync(async (req, res) => {
-  const report = await reportService.createReport(req.body);
+  const report = await reportService.createReport({ ...req.body, user: req.user.id });
   res.status(httpStatus.CREATED).send(report);
 });
 
 const getReports = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['contentType', 'url', 'reason']);
+  const filter = pick(req.query, ['url', 'cause']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await reportService.queryReports(filter, options);
   res.send(result);
+});
+
+const getDistinctApprovedUrls = catchAsync(async (req, res) => {
+  const approvedUrls = await reportService.getDistinctApprovedUrls();
+  res.status(httpStatus.OK).json({ approvedUrls });
 });
 
 const getReport = catchAsync(async (req, res) => {
@@ -37,6 +42,7 @@ const deleteReport = catchAsync(async (req, res) => {
 module.exports = {
   createReport,
   getReports,
+  getDistinctApprovedUrls,
   getReport,
   updateReport,
   deleteReport,

@@ -1,5 +1,4 @@
-const httpStatus = require('http-status');
-const Report = require('../models/report.model');
+const { Report } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 /**
@@ -8,6 +7,12 @@ const ApiError = require('../utils/ApiError');
  * @returns {Promise<Report>}
  */
 const createReport = async (reportBody) => {
+  if (await Report.isAlreadyReported(reportBody.user, reportBody.url)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'You have already reported this URL.');
+  }
+  // Check if the URL has been reported more than 50 times, and approve it if necessary
+  await Report.checkAndApproveUrl(reportBody.url);
+
   return Report.create(reportBody);
 };
 
@@ -18,7 +23,8 @@ const createReport = async (reportBody) => {
  * @returns {Promise<QueryResult>}
  */
 const queryReports = async (filter, options) => {
-  return Report.find(filter, null, options);
+  const reports = await Report.paginate(filter, options);
+  return reports;
 };
 
 /**
@@ -27,7 +33,7 @@ const queryReports = async (filter, options) => {
  * @returns {Promise<Report>}
  */
 const getReportById = async (id) => {
-  return Report.findById(id);
+  return Report.findById(id).populate('user');
 };
 
 /**
@@ -60,10 +66,19 @@ const deleteReportById = async (reportId) => {
   return report;
 };
 
+/**
+ * Get distinct approved URLs
+ * @returns {Promise<Array<String>>}
+ */
+const getDistinctApprovedUrls = async () => {
+  return Report.distinct('url', { status: 'approved' });
+};
+
 module.exports = {
   createReport,
   queryReports,
   getReportById,
   updateReportById,
   deleteReportById,
+  getDistinctApprovedUrls,
 };
