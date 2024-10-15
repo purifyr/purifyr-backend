@@ -31,7 +31,7 @@ module.exports = router;
  * /reports:
  *   post:
  *     summary: Create a report
- *     description: Authenticated users can create a report to flag a suspicious URL.
+ *     description: Authenticated users can create a report to flag a suspicious URL. Each user can only report a specific URL once.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -53,16 +53,24 @@ module.exports = router;
  *                 type: string
  *                 enum: [harassment, terrorism, phishing, fraud, illegal_content, other]
  *                 description: Cause of the report
+ *               description:
+ *                 type: string
+ *                 description: Optional description of the report
  *             example:
  *               url: https://example.com
  *               cause: harassment
+ *               description: This site contains harassing content
  *     responses:
  *       "201":
  *         description: Created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Report'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Signalement enregistré et URL approuvée automatiquement."
  *       "400":
  *         $ref: '#/components/responses/BadRequest'
  *       "401":
@@ -70,7 +78,7 @@ module.exports = router;
  *
  *   get:
  *     summary: Get all reports
- *     description: Retrieve a list of all reports. Only admins can view all reports.
+ *     description: Retrieve a list of all reports. Only admins can view all reports. Filters can be applied by URL and cause.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -85,12 +93,12 @@ module.exports = router;
  *         name: cause
  *         schema:
  *           type: string
- *         description: Filter by cause
+ *         description: Filter by cause of report
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *         description: Sort option in the format
+ *         description: Sorting option, e.g., "createdAt:desc"
  *       - in: query
  *         name: limit
  *         schema:
@@ -137,7 +145,7 @@ module.exports = router;
  * @swagger
  * /reports/{reportId}:
  *   get:
- *     summary: Get a report
+ *     summary: Get a specific report by ID
  *     description: Retrieve a specific report by its ID. Only admins can view any report.
  *     tags: [Reports]
  *     security:
@@ -148,7 +156,7 @@ module.exports = router;
  *         required: true
  *         schema:
  *           type: string
- *         description: Report ID
+ *         description: The ID of the report
  *     responses:
  *       "200":
  *         description: OK
@@ -165,7 +173,7 @@ module.exports = router;
  *
  *   patch:
  *     summary: Update a report
- *     description: Update report status or details. Only admins can update reports.
+ *     description: Allows an admin to update the status or cause of a report.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -175,7 +183,7 @@ module.exports = router;
  *         required: true
  *         schema:
  *           type: string
- *         description: Report ID
+ *         description: The ID of the report
  *     requestBody:
  *       required: true
  *       content:
@@ -186,15 +194,17 @@ module.exports = router;
  *               cause:
  *                 type: string
  *                 enum: [harassment, terrorism, phishing, fraud, illegal_content, other]
+ *                 description: Updated cause of the report
  *               status:
  *                 type: string
  *                 enum: [pending, reviewed, resolved, rejected]
+ *                 description: Update the status of the report
  *             example:
  *               cause: fraud
  *               status: reviewed
  *     responses:
  *       "200":
- *         description: OK
+ *         description: Updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -208,7 +218,7 @@ module.exports = router;
  *
  *   delete:
  *     summary: Delete a report
- *     description: Remove a report. Only admins can delete reports.
+ *     description: Allows an admin to delete a report.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -218,10 +228,10 @@ module.exports = router;
  *         required: true
  *         schema:
  *           type: string
- *         description: Report ID
+ *         description: The ID of the report
  *     responses:
  *       "204":
- *         description: No content
+ *         description: No content, report deleted successfully
  *       "401":
  *         $ref: '#/components/responses/Unauthorized'
  *       "404":

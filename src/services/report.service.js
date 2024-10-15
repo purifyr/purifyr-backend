@@ -1,30 +1,34 @@
+const httpStatus = require('http-status');
 const { Report } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 /**
- * Create a report
- * @param {Object} reportBody
- * @returns {Promise<Report>}
+ * Create a new report for a URL
+ * @param {ObjectId} userId - The user ID
+ * @param {string} url - The URL to report
+ * @param {string} cause - The reason for the report
+ * @param {string} description - Optional description
+ * @returns {Promise<Object>} - The result of the report creation
  */
-const createReport = async (reportBody) => {
-  if (await Report.isAlreadyReported(reportBody.user, reportBody.url)) {
+const createReport = async (userId, url, cause, description) => {
+  // Vérifie si l'utilisateur a déjà signalé l'URL
+  const alreadyReported = await Report.isAlreadyReported(userId, url);
+  if (alreadyReported) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'You have already reported this URL.');
   }
-  // Check if the URL has been reported more than 50 times, and approve it if necessary
-  await Report.checkAndApproveUrl(reportBody.url);
-
-  return Report.create(reportBody);
+  const report = await Report.addReport(userId, url, cause, description);
+  await Report.checkAndApproveUrl(url);
+  return report;
 };
 
 /**
  * Query for reports
- * @param {Object} filter - Mongo filter
- * @param {Object} options - Query options
+ * @param {Object} filter
+ * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
 const queryReports = async (filter, options) => {
-  const reports = await Report.paginate(filter, options);
-  return reports;
+  return Report.paginate(filter, options);
 };
 
 /**
@@ -33,7 +37,7 @@ const queryReports = async (filter, options) => {
  * @returns {Promise<Report>}
  */
 const getReportById = async (id) => {
-  return Report.findById(id).populate('user');
+  return Report.findById(id);
 };
 
 /**
@@ -71,7 +75,7 @@ const deleteReportById = async (reportId) => {
  * @returns {Promise<Array<String>>}
  */
 const getDistinctApprovedUrls = async () => {
-  return Report.distinct('url', { status: 'approved' });
+  return Report.getDistinctApprovedUrls();
 };
 
 module.exports = {

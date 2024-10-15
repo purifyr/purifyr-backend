@@ -5,8 +5,12 @@ const { reportService } = require('../services');
 const ApiError = require('../utils/ApiError');
 
 const createReport = catchAsync(async (req, res) => {
-  const report = await reportService.createReport({ ...req.body, user: req.user.id });
-  res.status(httpStatus.CREATED).send(report);
+  const { url, cause, description } = req.body;
+  const userId = req.user.id;
+
+  const result = await reportService.createReport(userId, url, cause, description);
+
+  res.status(httpStatus.CREATED).send(result);
 });
 
 const getReports = catchAsync(async (req, res) => {

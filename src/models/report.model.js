@@ -4,28 +4,44 @@ const { toJSON, paginate } = require('./plugins');
 
 const reportSchema = mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
     url: {
       type: String,
       required: true,
+      unique: true,
       validate(value) {
         if (!validator.isURL(value)) {
           throw new Error('Invalid URL');
         }
       },
     },
-    cause: {
-      type: String,
-      enum: ['harassment', 'terrorism', 'phishing', 'fraud', 'illegal_content', 'other'],
-      required: true,
+    reportsCount: {
+      type: Number,
+      default: 0,
     },
+    reportedBy: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        reportDate: {
+          type: Date,
+          default: Date.now,
+        },
+        cause: {
+          type: String,
+          enum: ['harassment', 'terrorism', 'phishing', 'fraud', 'illegal_content', 'other'],
+          required: true,
+        },
+        description: {
+          type: String,
+        },
+      },
+    ],
     status: {
       type: String,
-      enum: ['pending', 'reviewed', 'resolved', 'rejected'],
+      enum: ['pending', 'rejected', 'approved'],
       default: 'pending',
     },
   },
@@ -44,17 +60,38 @@ reportSchema.plugin(paginate);
  * @returns {Promise<boolean>}
  */
 reportSchema.statics.isAlreadyReported = async function (userId, url) {
-  const report = await this.findOne({ user: userId, url });
-  return !!report;
+  const report = await this.findOne({ url });
+  if (report) {
+    // Vérifie si l'utilisateur a déjà signalé cette URL
+    return report.reportedBy.some((reportEntry) => reportEntry.userId.toString() === userId.toString());
+  }
+  return false;
 };
 
 /**
- * Count reports by URL
- * @param {string} url - The URL to count reports for
- * @returns {Promise<number>} - The count of reports for the given URL
+ * Increment the report count for an existing URL and add user details
+ * @param {ObjectId} userId - The ID of the user
+ * @param {string} url - The URL to update
+ * @param {string} cause - The reason for the report
+ * @param {string} description - Optional description
+ * @returns {Promise<void>}
  */
-reportSchema.statics.countReportsByUrl = async function (url) {
-  return this.countDocuments({ url });
+reportSchema.statics.addReport = async function (userId, url, cause, description) {
+  // Checks if the report already exists
+  const report = await this.findOne({ url });
+  if (report) {
+    report.reportedBy.push({ userId, cause, description });
+    report.reportsCount += 1;
+    await report.save();
+    return report;
+  }
+  // Create a new report if one does not exist for this URL
+  const newReport = await this.create({
+    url,
+    reportsCount: 1,
+    reportedBy: [{ userId, cause, description }],
+  });
+  return newReport;
 };
 
 /**
@@ -63,17 +100,17 @@ reportSchema.statics.countReportsByUrl = async function (url) {
  * @returns {Promise<boolean>} - Whether the URL should be approved or not
  */
 reportSchema.statics.checkAndApproveUrl = async function (url) {
-  const reportCount = await this.countReportsByUrl(url);
-  if (reportCount >= 5) {
-    // Update the status of all reports for this URL to 'approved'
-    await this.updateMany({ url }, { status: 'approved' });
-    return true; // URL approved
+  const report = await this.findOne({ url });
+  if (report && report.reportsCount >= 5) {
+    report.status = 'approved';
+    await report.save();
+    return true; // URL approuvée
   }
-  return false; // URL not yet approved
+  return false; // URL pas encore approuvée
 };
 
 /**
- * Static method to retrieve distinct approved URLs
+ * Retrieve distinct approved URLs
  */
 reportSchema.statics.getDistinctApprovedUrls = async function () {
   return this.distinct('url', { status: 'approved' });
