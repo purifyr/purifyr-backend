@@ -11,6 +11,8 @@ router
   .post(auth('createReport'), validate(reportValidation.createReport), reportController.createReport)
   .get(auth('getReports'), validate(reportValidation.getReports), reportController.getReports);
 
+router.route('/approved-urls').get(reportController.getDistinctApprovedUrls);
+
 router
   .route('/:reportId')
   .get(auth('getReports'), validate(reportValidation.getReport), reportController.getReport)
@@ -94,6 +96,11 @@ module.exports = router;
  *         schema:
  *           type: string
  *         description: Filter by cause of report
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by status of report
  *       - in: query
  *         name: sortBy
  *         schema:

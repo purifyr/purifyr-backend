@@ -14,7 +14,7 @@ const createReport = catchAsync(async (req, res) => {
 });
 
 const getReports = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['url', 'cause']);
+  const filter = pick(req.query, ['url', 'cause', 'status']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await reportService.queryReports(filter, options);
   res.send(result);

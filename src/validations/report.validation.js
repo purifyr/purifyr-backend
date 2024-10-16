@@ -13,6 +13,7 @@ const getReports = {
   query: Joi.object().keys({
     url: Joi.string().uri(), // Filtrer par URL
     cause: Joi.string(), // Filtrer par cause
+    status: Joi.string(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
