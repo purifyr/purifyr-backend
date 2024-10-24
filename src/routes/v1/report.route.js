@@ -8,7 +8,7 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('createReports'), validate(reportValidation.createReport), reportController.createReport)
+  .post(auth('createReport'), validate(reportValidation.createReport), reportController.createReport)
   .get(auth('getReports'), reportController.getReports);
 
 router.route('/approved-urls').get(reportController.getDistinctApprovedUrls);
